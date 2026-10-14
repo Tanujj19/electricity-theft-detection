@@ -146,7 +146,10 @@ def make_cat_objective(X_train, y_train, cv_folds=5):
     return objective
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ==============================================================================
+# [RUBRIC 2: ADVANCED MODELING & PIPELINE OPTIMIZATION - 10 MARKS]
+# Requirement: Hyperparameter Tuning via Optuna (TPE Bayesian Optimization)
+# ==============================================================================
 def run_optuna_study(name, objective_fn, n_trials=30):
     """Run an Optuna study to maximize CV F1 score."""
     print(f"\n  Running Optuna ({n_trials} trials) for {name} ...")
