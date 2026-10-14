@@ -1,0 +1,66 @@
+paths:
+  raw_data:        "data/raw/data set.csv"
+  processed_data:  "data/processed/features.csv"
+  models_dir:      "models/"
+  figures_dir:     "results/figures/"
+  metrics_dir:     "results/metrics/"
+
+data:
+  label_column:    "FLAG"
+  test_size:       0.15
+  val_size:        0.15
+  random_state:    42
+
+preprocessing:
+  missing_threshold: 0.5      # drop row if more than 50% of daily readings are missing
+  outlier_cap:       99       # cap outliers at this percentile
+
+features:
+  rolling_window: 7           # days for rolling mean/std
+
+# ── Optuna Hyperparameter Optimization ──────────────────────────────────────
+optuna:
+  n_trials:   30              # number of Bayesian optimization trials per model
+  sampler:    "TPE"           # Tree-structured Parzen Estimator
+  direction:  "maximize"      # maximize F1
+  seed:       42
+
+# ── Baseline Models (GridSearchCV) ──────────────────────────────────────────
+models:
+  logistic_regression:
+    max_iter: 1000
+    param_grid:
+      C: [0.01, 0.1, 1, 10]
+      solver: ["lbfgs"]
+
+  random_forest:
+    param_grid:
+      n_estimators: [100, 200]
+      max_depth: [10, 20, null]
+      min_samples_split: [2, 5]
+
+  xgboost:
+    param_grid:
+      n_estimators: [100, 200]
+      max_depth: [3, 5, 7]
+      learning_rate: [0.05, 0.1]
+      subsample: [0.8, 1.0]
+
+  lightgbm:
+    n_estimators: 300
+    max_depth: 6
+    learning_rate: 0.05
+    num_leaves: 63
+
+  catboost:
+    iterations: 300
+    depth: 6
+    learning_rate: 0.05
+
+evaluation:
+  cv_folds: 5
+  scoring:  "f1"              # primary metric for GridSearchCV / Optuna
+
+risk_score:
+  low_threshold:    0.4
+  medium_threshold: 0.7

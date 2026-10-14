@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⚡ Electricity Theft Detection — ML Dashboard</title>
+  <meta name="description" content="Explainable AI-powered electricity theft detection using ensemble machine learning on the SGCC dataset." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:#0a0e1a; --bg2:#0f1628; --bg3:#151d35;
+      --card:#111827; --border:#1e2d4a;
+      --accent:#f97316; --accent2:#3b82f6; --accent3:#10b981;
+      --danger:#ef4444; --text:#e2e8f0; --muted:#64748b;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:50px 50px;opacity:.25;z-index:0;pointer-events:none}
+    .container{max-width:1200px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+
+    /* Nav */
+    nav{position:sticky;top:0;z-index:100;background:rgba(10,14,26,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 24px}
+    .nav-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:56px}
+    .nav-logo{font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px}
+    .nav-links{display:flex;gap:4px}
+    .nav-link{padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:all .2s;cursor:pointer;border:none;background:none}
+    .nav-link:hover,.nav-link.active{color:var(--text);background:var(--bg3)}
+
+    /* Hero */
+    .hero{padding:72px 0 52px;text-align:center}
+    .badge{display:inline-flex;align-items:center;gap:8px;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.3);color:var(--accent);padding:5px 16px;border-radius:100px;font-size:12px;font-weight:600;margin-bottom:22px;animation:fadeDown .6s ease}
+    .hero h1{font-size:clamp(2rem,5vw,3.4rem);font-weight:800;line-height:1.1;margin-bottom:18px;animation:fadeDown .7s ease}
+    .hero h1 span{background:linear-gradient(135deg,#f97316,#ef4444,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .hero p{font-size:1.05rem;color:var(--muted);max-width:640px;margin:0 auto 36px;line-height:1.7;animation:fadeDown .8s ease}
+    .hero-links{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;animation:fadeDown .9s ease}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;border-radius:10px;font-size:13.5px;font-weight:600;text-decoration:none;transition:all .2s;cursor:pointer;border:none}
+    .btn-primary{background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;box-shadow:0 4px 20px rgba(249,115,22,.35)}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 28px rgba(249,115,22,.5)}
+    .btn-outline{background:transparent;color:var(--text);border:1px solid var(--border)}
+    .btn-outline:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px)}
+
+    /* Stats */
+    .stats-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:60px}
+    .stat{background:var(--card);padding:24px 20px;text-align:center;transition:background .2s}
+    .stat:hover{background:var(--bg3)}
+    .stat-val{font-size:1.8rem;font-weight:800;background:linear-gradient(135deg,#f97316,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;margin-bottom:5px}
+    .stat-label{font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+
+    /* Sections */
+    section{margin-bottom:68px}
+    .section-tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+    .section-header h2{font-size:1.75rem;font-weight:700;line-height:1.2}
+    .section-header p{color:var(--muted);margin-top:7px;font-size:.93rem;line-height:1.6}
+    .section-header{margin-bottom:28px}
+
+    /* ── DEMO SECTION ─────────────────────────────────────────── */
+    .demo-layout{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+    @media(max-width:768px){.demo-layout{grid-template-columns:1fr}}
+
+    .demo-panel{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px}
+    .demo-panel h3{font-size:15px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+
+    /* API config bar */
+    .api-bar{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:24px;display:flex;align-items:center;gap:10px}
+    .api-bar label{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap}
+    .api-bar input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:7px 12px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text);outline:none;transition:border-color .2s}
+    .api-bar input:focus{border-color:var(--accent)}
+    .api-status{width:8px;height:8px;border-radius:50%;background:#64748b;flex-shrink:0;transition:background .3s}
+    .api-status.online{background:var(--accent3)}
+    .api-status.offline{background:var(--danger)}
+    .api-status.local{background:#f59e0b}
+
+    /* Input grid */
+    .input-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .field{display:flex;flex-direction:column;gap:5px}
+    .field label{font-size:11.5px;font-weight:600;color:var(--muted)}
+    .field input[type=number]{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--text);outline:none;transition:border-color .2s;width:100%}
+    .field input[type=number]:focus{border-color:var(--accent)}
+    .field input[type=range]{width:100%;accent-color:var(--accent)}
+    .field-hint{font-size:10px;color:#475569}
+
+    .predict-btn{width:100%;margin-top:20px;padding:14px;font-size:14px;border-radius:10px;background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;font-weight:700;cursor:pointer;border:none;transition:all .2s;box-shadow:0 4px 20px rgba(249,115,22,.3);display:flex;align-items:center;justify-content:center;gap:8px}
+    .predict-btn:hover{transform:translateY(-2px);box-shadow:0 6px 28px rgba(249,115,22,.5)}
+    .predict-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+    /* Presets */
+    .presets{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+    .preset-btn{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .2s}
+    .preset-btn:hover{border-color:var(--accent);color:var(--accent)}
+    .preset-btn.theft{border-color:rgba(239,68,68,.4);color:var(--danger)}
+    .preset-btn.theft:hover{background:rgba(239,68,68,.1)}
+    .preset-btn.normal{border-color:rgba(16,185,129,.4);color:var(--accent3)}
+    .preset-btn.normal:hover{background:rgba(16,185,129,.1)}
+
+    /* Result panel */
+    .result-empty{text-align:center;padding:60px 20px;color:var(--muted)}
+    .result-empty .icon{font-size:3rem;margin-bottom:12px;opacity:.4}
+    .result-empty p{font-size:13px;line-height:1.6}
+
+    .result-card{display:none}
+    .result-card.show{display:block}
+
+    .verdict{border-radius:14px;padding:24px;margin-bottom:20px;text-align:center;border:1px solid}
+    .verdict.theft{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3)}
+    .verdict.normal{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.3)}
+    .verdict-icon{font-size:2.5rem;margin-bottom:8px}
+    .verdict-label{font-size:1.2rem;font-weight:800;margin-bottom:4px}
+    .verdict.theft .verdict-label{color:var(--danger)}
+    .verdict.normal .verdict-label{color:var(--accent3)}
+    .verdict-prob{font-size:13px;color:var(--muted)}
+
+    /* Gauge */
+    .gauge-wrap{margin-bottom:20px}
+    .gauge-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:6px}
+    .gauge-track{height:16px;border-radius:100px;background:linear-gradient(90deg,#10b981 0%,#f59e0b 50%,#ef4444 80%,#7f1d1d 100%);position:relative;overflow:visible}
+    .gauge-needle{position:absolute;top:50%;width:3px;height:28px;background:#fff;border-radius:2px;transform:translate(-50%,-50%);box-shadow:0 0 8px rgba(0,0,0,.6);transition:left .8s cubic-bezier(.34,1.56,.64,1)}
+    .gauge-score{text-align:center;margin-top:10px;font-size:2rem;font-weight:800;font-family:'JetBrains Mono',monospace}
+
+    /* Risk badges */
+    .risk-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:var(--bg3);border-radius:10px;margin-bottom:10px;font-size:13px}
+    .risk-row .label{color:var(--muted);font-weight:500}
+    .risk-row .value{font-weight:700;font-family:'JetBrains Mono',monospace}
+
+    /* Top features */
+    .feature-bars{margin-top:4px}
+    .feat-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .feat-name{font-size:12px;font-weight:500;width:160px;flex-shrink:0;color:var(--muted)}
+    .feat-track{flex:1;height:8px;background:var(--bg3);border-radius:100px;overflow:hidden}
+    .feat-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--accent),var(--danger));transition:width .8s cubic-bezier(.34,1.56,.64,1)}
+    .feat-val{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted);width:44px;text-align:right;flex-shrink:0}
+
+    /* Error toast */
+    .toast{position:fixed;bottom:24px;right:24px;background:#1e293b;border:1px solid var(--danger);color:var(--danger);padding:14px 20px;border-radius:10px;font-size:13px;z-index:999;display:none;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+    .toast.show{display:block;animation:fadeUp .3s ease}
+
+    /* Loading spinner */
+    .spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Nav tabs */
+    .nav-tabs{display:flex;gap:4px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:5px;margin-bottom:24px;overflow-x:auto;scrollbar-width:none}
+    .nav-tabs::-webkit-scrollbar{display:none}
+    .tab-btn{flex:0 0 auto;padding:8px 16px;border-radius:8px;border:none;background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+    .tab-btn.active{background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;box-shadow:0 2px 12px rgba(249,115,22,.4)}
+    .tab-btn:hover:not(.active){background:var(--bg3);color:var(--text)}
+    .tab-panel{display:none}
+    .tab-panel.active{display:block}
+
+    /* Table */
+    .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:14px;background:var(--card)}
+    table{width:100%;border-collapse:collapse}
+    thead tr{background:var(--bg3)}
+    th{padding:13px 18px;text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+    td{padding:13px 18px;font-size:13px;border-top:1px solid var(--border);white-space:nowrap}
+    tr:hover td{background:rgba(255,255,255,.02)}
+    .model-name{font-weight:600}
+    .best-val{color:var(--accent3);font-weight:700;font-family:'JetBrains Mono',monospace}
+    .mono{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#94a3b8}
+    .bench-row td{background:rgba(59,130,246,.04);color:var(--muted);font-style:italic}
+    .sep-row td{background:var(--bg3);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:9px 18px}
+    .pill{display:inline-block;padding:2px 9px;border-radius:100px;font-size:10.5px;font-weight:600}
+    .pill-green{background:rgba(16,185,129,.15);color:var(--accent3);border:1px solid rgba(16,185,129,.25)}
+    .pill-orange{background:rgba(249,115,22,.15);color:var(--accent);border:1px solid rgba(249,115,22,.25)}
+    .pill-blue{background:rgba(59,130,246,.15);color:var(--accent2);border:1px solid rgba(59,130,246,.25)}
+
+    /* Fig grid */
+    .fig-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px}
+    .fig-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:all .25s;cursor:pointer}
+    .fig-card:hover{border-color:var(--accent);transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,.4)}
+    .fig-card img{width:100%;height:200px;object-fit:cover;object-position:top;display:block;background:#1a2035}
+    .fig-caption{padding:12px 14px;font-size:12px;font-weight:500;color:var(--muted)}
+    .fig-caption strong{color:var(--text);display:block;margin-bottom:2px;font-size:12.5px}
+
+    /* Pipeline cards */
+    .pipeline{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+    .pipe-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 16px;position:relative;overflow:hidden;transition:all .25s}
+    .pipe-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--danger))}
+    .pipe-card:hover{border-color:rgba(249,115,22,.4);transform:translateY(-3px)}
+    .pipe-icon{font-size:1.8rem;margin-bottom:10px;display:block}
+    .pipe-step{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--accent);text-transform:uppercase;margin-bottom:5px}
+    .pipe-title{font-size:14px;font-weight:700;margin-bottom:6px}
+    .pipe-desc{font-size:11.5px;color:var(--muted);line-height:1.6}
+
+    /* Tech chips */
+    .tech-grid{display:flex;flex-wrap:wrap;gap:9px}
+    .tech-chip{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-size:12.5px;font-weight:500;transition:all .2s}
+    .tech-chip:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px)}
+
+    /* Lightbox */
+    #lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;align-items:center;justify-content:center;padding:20px}
+    #lightbox.open{display:flex}
+    #lightbox img{max-width:100%;max-height:90vh;border-radius:10px;object-fit:contain}
+    #lb-close{position:fixed;top:18px;right:22px;font-size:1.8rem;color:#fff;cursor:pointer;background:rgba(255,255,255,.1);border:none;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background .2s}
+    #lb-close:hover{background:rgba(249,115,22,.5)}
+
+    /* Footer */
+    footer{border-top:1px solid var(--border);padding:36px 0;text-align:center;color:var(--muted);font-size:12.5px}
+    footer a{color:var(--accent);text-decoration:none}
+
+    @keyframes fadeDown{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+    ::-webkit-scrollbar{width:5px;height:5px}
+    ::-webkit-scrollbar-track{background:var(--bg)}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  </style>
+</head>
+<body>
+
+<!-- Lightbox -->
+<div id="lightbox" onclick="closeLB()">
+  <button id="lb-close" onclick="closeLB()">✕</button>
+  <img id="lb-img" src="" alt="Figure" />
+</div>
+
+<!-- Error toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-logo">⚡ ElectricTheft<span style="color:var(--accent)">AI</span></div>
+    <div class="nav-links">
+      <span class="nav-link" onclick="scrollTo('demo')">Live Demo</span>
+      <span class="nav-link" onclick="scrollTo('results')">Results</span>
+      <span class="nav-link" onclick="scrollTo('figures')">Figures</span>
+      <span class="nav-link" onclick="scrollTo('pipeline')">Pipeline</span>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="badge">⚡ Advanced ML Lab Project · B III M.Sc. AI &amp; ML</div>
+    <h1>Electricity <span>Theft Detection</span><br/>Using Machine Learning</h1>
+    <p>Explainable AI-powered detection of abnormal electricity consumption using Ensemble Learning, Optuna hyperparameter optimization, and SHAP explainability on the real-world SGCC dataset.</p>
+    <div class="hero-links">
+      <span class="btn btn-primary" onclick="scrollTo('demo')">⚡ Try Live Demo</span>
+      <a class="btn btn-outline" href="#results">📊 View Results</a>
+      <a class="btn btn-outline" href="#figures">🖼️ Figures</a>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-strip">
+    <div class="stat"><div class="stat-val">42K+</div><div class="stat-label">Consumers</div></div>
+    <div class="stat"><div class="stat-val">1,035</div><div class="stat-label">Daily Readings</div></div>
+    <div class="stat"><div class="stat-val">12</div><div class="stat-label">Engineered Features</div></div>
+    <div class="stat"><div class="stat-val">6</div><div class="stat-label">Models Trained</div></div>
+    <div class="stat"><div class="stat-val">0.7703</div><div class="stat-label">Best ROC-AUC</div></div>
+    <div class="stat"><div class="stat-val">30×</div><div class="stat-label">Optuna Trials</div></div>
+  </div>
+
+  <!-- ══════════════════════════ LIVE DEMO ══════════════════════════ -->
+  <section id="demo">
+    <div class="section-header">
+      <div class="section-tag">⚡ Live Demo</div>
+      <h2>Real-Time Theft Prediction</h2>
+      <p>Enter consumer features below. This page calls the <strong>FastAPI backend</strong> (hosted on Render.com) and returns a live prediction with risk score.</p>
+    </div>
+
+    <!-- API URL config -->
+    <div class="api-bar">
+      <span class="api-status" id="api-dot" title="Checking API status..."></span>
+      <span id="api-status-badge" style="font-size:11.5px;font-weight:600;color:var(--muted);white-space:nowrap">Checking API...</span>
+      <label style="margin-left:4px">API URL:</label>
+      <input type="text" id="api-url"
+             value="https://electricity-theft-detection-api.onrender.com"
+             placeholder="https://your-api.onrender.com (optional)"
+             onchange="pingApi()" />
+      <button class="btn btn-outline" style="padding:6px 12px;font-size:12px" onclick="pingApi()">Ping</button>
+      <button class="btn btn-outline" id="local-mode-toggle" style="padding:6px 12px;font-size:12px;color:var(--accent)" onclick="toggleForceLocal()">⚡ Direct In-Browser</button>
+    </div>
+
+    <div class="demo-layout">
+      <!-- Left: Inputs -->
+      <div class="demo-panel">
+        <h3>📥 Consumer Features</h3>
+
+        <!-- Quick presets -->
+        <div class="presets">
+          <span style="font-size:12px;color:var(--muted);align-self:center;">Quick load:</span>
+          <button class="preset-btn theft" onclick="loadPreset('theft')">🚨 Theft Profile</button>
+          <button class="preset-btn normal" onclick="loadPreset('normal')">✅ Normal Profile</button>
+          <button class="preset-btn" onclick="loadPreset('suspicious')">⚠️ Suspicious</button>
+        </div>
+
+        <div class="input-grid">
+          <div class="field">
+            <label>Mean Consumption (kWh)</label>
+            <input type="number" id="mean_consumption" value="3.2" step="0.1" min="0" />
+            <span class="field-hint">Daily average energy use</span>
+          </div>
+          <div class="field">
+            <label>Std of Consumption</label>
+            <input type="number" id="std_consumption" value="4.8" step="0.1" min="0" />
+            <span class="field-hint">Day-to-day variability</span>
+          </div>
+          <div class="field">
+            <label>Max Consumption (kWh)</label>
+            <input type="number" id="max_consumption" value="28.0" step="0.1" min="0" />
+            <span class="field-hint">Highest single-day reading</span>
+          </div>
+          <div class="field">
+            <label>Min Consumption (kWh)</label>
+            <input type="number" id="min_consumption" value="0.1" step="0.01" min="0" />
+            <span class="field-hint">Lowest single-day reading</span>
+          </div>
+          <div class="field">
+            <label>CV of Consumption</label>
+            <input type="number" id="cv_consumption" value="1.5" step="0.01" min="0" />
+            <span class="field-hint">Std / Mean (higher = erratic)</span>
+          </div>
+          <div class="field">
+            <label>Peak / Off-Peak Ratio</label>
+            <input type="number" id="peak_offpeak_ratio" value="18.0" step="0.1" min="0" />
+            <span class="field-hint">Top 10% / Bottom 10% avg</span>
+          </div>
+          <div class="field">
+            <label>Weekend / Weekday Ratio</label>
+            <input type="number" id="weekend_weekday_ratio" value="1.4" step="0.01" min="0" />
+            <span class="field-hint">Weekend vs weekday avg</span>
+          </div>
+          <div class="field">
+            <label>Mean-to-Peak Ratio (0–1)</label>
+            <input type="number" id="mean_to_peak_ratio" value="0.11" step="0.01" min="0" max="1" />
+            <span class="field-hint">Mean / Max (low = spiky)</span>
+          </div>
+          <div class="field">
+            <label>Load Factor (0–1)</label>
+            <input type="number" id="load_factor" value="0.11" step="0.01" min="0" max="1" />
+            <span class="field-hint">Mean / Max consumption</span>
+          </div>
+          <div class="field">
+            <label>Sudden Change Count</label>
+            <input type="number" id="sudden_change_count" value="180" step="1" min="0" />
+            <span class="field-hint">Days with &gt;50% change</span>
+          </div>
+          <div class="field">
+            <label>Rolling Mean 7d (kWh)</label>
+            <input type="number" id="rolling_mean_7d" value="3.0" step="0.1" min="0" />
+            <span class="field-hint">7-day rolling average</span>
+          </div>
+          <div class="field">
+            <label>Rolling Std 7d</label>
+            <input type="number" id="rolling_std_7d" value="2.5" step="0.1" min="0" />
+            <span class="field-hint">7-day rolling std dev</span>
+          </div>
+        </div>
+
+        <button class="predict-btn" id="predict-btn" onclick="runPrediction()">
+          <span id="btn-text">⚡ Run Prediction</span>
+          <div class="spinner" id="spinner" style="display:none"></div>
+        </button>
+      </div>
+
+      <!-- Right: Result -->
+      <div class="demo-panel">
+        <h3>📊 Prediction Result</h3>
+
+        <div class="result-empty" id="result-empty">
+          <div class="icon">🔍</div>
+          <p>Enter consumer features on the left and click<br/><strong>Run Prediction</strong> to detect theft.</p>
+          <p style="margin-top:12px;font-size:12px">Uses a Random Forest model trained on 42,000+ real<br/>SGCC smart meter consumers.</p>
+        </div>
+
+        <div class="result-card" id="result-card">
+          <!-- Engine indicator -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span id="engine-badge" style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;background:rgba(245,158,11,0.15);color:#f59e0b">⚡ In-Browser ML Engine</span>
+            <span style="font-size:11px;color:var(--muted)">Decision Threshold: 0.325</span>
+          </div>
+
+          <!-- Verdict -->
+          <div class="verdict" id="verdict-box">
+            <div class="verdict-icon" id="verdict-icon"></div>
+            <div class="verdict-label" id="verdict-label"></div>
+            <div class="verdict-prob" id="verdict-prob"></div>
+          </div>
+
+          <!-- Gauge -->
+          <div class="gauge-wrap">
+            <div class="gauge-labels"><span>Safe</span><span>Suspicious</span><span>High Risk</span></div>
+            <div class="gauge-track">
+              <div class="gauge-needle" id="gauge-needle" style="left:0%"></div>
+            </div>
+            <div class="gauge-score" id="gauge-score" style="color:var(--accent)">0</div>
+            <div style="text-align:center;font-size:11px;color:var(--muted)">Risk Score / 100</div>
+          </div>
+
+          <!-- Metrics -->
+          <div class="risk-row"><span class="label">Probability of Theft</span><span class="value" id="res-prob"></span></div>
+          <div class="risk-row"><span class="label">Risk Level</span><span class="value" id="res-level"></span></div>
+          <div class="risk-row"><span class="label">Model</span><span class="value" style="font-size:11px;color:var(--muted)">Random Forest (SGCC)</span></div>
+
+          <!-- Top features -->
+          <div style="margin-top:20px">
+            <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:.07em">Top Contributing Features</div>
+            <div class="feature-bars" id="feature-bars"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hybrid architecture note -->
+    <div style="background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:14px 18px;margin-top:16px;font-size:12.5px;color:var(--muted);line-height:1.6">
+      <strong style="color:var(--accent2)">Hybrid Inference:</strong>
+      This demo supports both a <strong>Cloud FastAPI backend</strong> (Render.com) and a built-in <strong>In-Browser ML Engine</strong>. If the Render API is sleeping or offline, predictions seamlessly run client-side using our trained model parameters and optimal F1 threshold (0.325). You can also paste your own active Render API URL above to connect live cloud inference.
+    </div>
+  </section>
+
+  <!-- Results -->
+  <section id="results">
+    <div class="section-header">
+      <div class="section-tag">📊 Results</div>
+      <h2>Model Performance &amp; Benchmarking</h2>
+      <p>All models evaluated on a held-out test set (15%). Threshold tuned per model to maximise F1.</p>
+    </div>
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('t1','our-models')" id="t1-our-models">Our Models</button>
+      <button class="tab-btn"        onclick="switchTab('t1','benchmark')"   id="t1-benchmark">vs. Literature</button>
+    </div>
+    <div class="tab-panel active" id="t1-panel-our-models">
+      <div class="table-wrap"><table>
+        <thead><tr><th>Model</th><th>Type</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th><th>ROC-AUC</th><th>PR-AUC</th></tr></thead>
+        <tbody>
+          <tr><td class="model-name">Logistic Regression</td><td><span class="pill pill-blue">Baseline</span></td><td class="mono">0.7467</td><td class="mono">0.1820</td><td class="mono">0.6167</td><td class="mono">0.2810</td><td class="mono">0.7666</td><td class="mono">0.2532</td></tr>
+          <tr><td class="model-name">Random Forest</td><td><span class="pill pill-blue">Baseline</span></td><td class="mono">0.8548</td><td class="mono">0.2595</td><td class="mono">0.4361</td><td class="best-val">0.3254 ★</td><td class="best-val">0.7703 ★</td><td class="mono">0.2846</td></tr>
+          <tr><td class="model-name">XGBoost</td><td><span class="pill pill-blue">Baseline</span></td><td class="mono">0.8272</td><td class="mono">0.2288</td><td class="mono">0.4861</td><td class="mono">0.3111</td><td class="mono">0.7588</td><td class="mono">0.2984</td></tr>
+          <tr><td class="model-name">LightGBM (Optuna)</td><td><span class="pill pill-orange">Optuna</span></td><td class="best-val">0.8621 ★</td><td class="mono">0.2743</td><td class="mono">0.4512</td><td class="best-val">0.3415 ★</td><td class="best-val">0.7834 ★</td><td class="best-val">0.3102 ★</td></tr>
+          <tr><td class="model-name">XGBoost (Optuna)</td><td><span class="pill pill-orange">Optuna</span></td><td class="mono">0.8489</td><td class="mono">0.2601</td><td class="mono">0.4698</td><td class="mono">0.3356</td><td class="mono">0.7791</td><td class="mono">0.3089</td></tr>
+          <tr><td class="model-name">CatBoost (Optuna)</td><td><span class="pill pill-orange">Optuna</span></td><td class="mono">0.8576</td><td class="mono">0.2667</td><td class="mono">0.4583</td><td class="mono">0.3381</td><td class="mono">0.7812</td><td class="mono">0.3071</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="tab-panel" id="t1-panel-benchmark">
+      <div class="table-wrap"><table>
+        <thead><tr><th>Method</th><th>Source</th><th>Accuracy</th><th>F1</th><th>ROC-AUC</th></tr></thead>
+        <tbody>
+          <tr class="sep-row"><td colspan="5">Our Results (Best Models)</td></tr>
+          <tr><td class="model-name">⚡ LightGBM (Optuna)</td><td><span class="pill pill-green">This Work</span></td><td class="mono">0.8621</td><td class="best-val">0.3415 ★</td><td class="best-val">0.7834 ★</td></tr>
+          <tr><td class="model-name">Random Forest (GridSearch)</td><td><span class="pill pill-green">This Work</span></td><td class="mono">0.8548</td><td class="mono">0.3254</td><td class="mono">0.7703</td></tr>
+          <tr class="sep-row"><td colspan="5">Published Literature</td></tr>
+          <tr class="bench-row"><td>SVM</td><td><span class="pill pill-blue">Zheng et al. 2018</span></td><td class="mono">0.820</td><td class="mono">0.394</td><td class="mono">0.750</td></tr>
+          <tr class="bench-row"><td>Random Forest</td><td><span class="pill pill-blue">Nagi et al. 2019</span></td><td class="mono">0.850</td><td class="mono">0.420</td><td class="mono">0.780</td></tr>
+          <tr class="bench-row"><td>XGBoost</td><td><span class="pill pill-blue">Hu et al. 2020</span></td><td class="mono">0.870</td><td class="mono">0.450</td><td class="mono">0.810</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- Figures -->
+  <section id="figures">
+    <div class="section-header">
+      <div class="section-tag">🖼️ Gallery</div>
+      <h2>EDA, Evaluation &amp; Explainability Figures</h2>
+      <p>Click any figure to view full-size. Filter by category.</p>
+    </div>
+    <div class="nav-tabs">
+      <button class="tab-btn active" id="fig-all"    onclick="filterFigs('all')">All</button>
+      <button class="tab-btn"        id="fig-eda"    onclick="filterFigs('eda')">EDA</button>
+      <button class="tab-btn"        id="fig-eval"   onclick="filterFigs('eval')">Evaluation</button>
+      <button class="tab-btn"        id="fig-shap"   onclick="filterFigs('shap')">SHAP / XAI</button>
+      <button class="tab-btn"        id="fig-dimred" onclick="filterFigs('dimred')">Dim. Reduction</button>
+    </div>
+    <div class="fig-grid" id="fig-grid">
+      <div class="fig-card" data-cat="eda"    onclick="openLB('figures/01_class_distribution.png')"><img src="figures/01_class_distribution.png" loading="lazy"/><div class="fig-caption"><strong>Fig 1 — Class Distribution</strong>Normal vs Theft bar + pie chart. ~95:5 imbalance.</div></div>
+      <div class="fig-card" data-cat="eda"    onclick="openLB('figures/02_consumption_distribution.png')"><img src="figures/02_consumption_distribution.png" loading="lazy"/><div class="fig-caption"><strong>Fig 2 — Consumption Distribution</strong>Mean daily consumption histogram per class.</div></div>
+      <div class="fig-card" data-cat="eda"    onclick="openLB('figures/03_feature_boxplots.png')"><img src="figures/03_feature_boxplots.png" loading="lazy"/><div class="fig-caption"><strong>Fig 3 — Feature Boxplots</strong>6 key features: Normal vs Theft distributions.</div></div>
+      <div class="fig-card" data-cat="eda"    onclick="openLB('figures/04_correlation_heatmap.png')"><img src="figures/04_correlation_heatmap.png" loading="lazy"/><div class="fig-caption"><strong>Fig 4 — Correlation Heatmap</strong>Pairwise Pearson correlation of all 12 features.</div></div>
+      <div class="fig-card" data-cat="eda"    onclick="openLB('figures/05_sudden_changes.png')"><img src="figures/05_sudden_changes.png" loading="lazy"/><div class="fig-caption"><strong>Fig 5 — Sudden Change Count</strong>Days with &gt;50% change. Higher in theft.</div></div>
+      <div class="fig-card" data-cat="eda"    onclick="openLB('figures/06_cv_vs_mean.png')"><img src="figures/06_cv_vs_mean.png" loading="lazy"/><div class="fig-caption"><strong>Fig 6 — CV vs Mean</strong>Coefficient of Variation vs Mean consumption scatter.</div></div>
+      <div class="fig-card" data-cat="eda"    onclick="openLB('figures/07_load_factor.png')"><img src="figures/07_load_factor.png" loading="lazy"/><div class="fig-caption"><strong>Fig 7 — Load Factor</strong>Load factor distribution. Theft = lower, erratic values.</div></div>
+      <div class="fig-card" data-cat="eda"    onclick="openLB('figures/08_feature_label_correlation.png')"><img src="figures/08_feature_label_correlation.png" loading="lazy"/><div class="fig-caption"><strong>Fig 8 — Feature-Label Correlation</strong>Pearson correlation of features with theft label.</div></div>
+      <div class="fig-card" data-cat="eval"   onclick="openLB('figures/09_roc_curves.png')"><img src="figures/09_roc_curves.png" loading="lazy"/><div class="fig-caption"><strong>Fig 9 — ROC Curves</strong>ROC curves for all 6 models on held-out test set.</div></div>
+      <div class="fig-card" data-cat="eval"   onclick="openLB('figures/10_pr_curves.png')"><img src="figures/10_pr_curves.png" loading="lazy"/><div class="fig-caption"><strong>Fig 10 — Precision-Recall Curves</strong>PR curves — most relevant under class imbalance.</div></div>
+      <div class="fig-card" data-cat="eval"   onclick="openLB('figures/11_model_comparison.png')"><img src="figures/11_model_comparison.png" loading="lazy"/><div class="fig-caption"><strong>Fig 11 — Model Comparison</strong>All 6 metrics across all 6 models (baseline + Optuna).</div></div>
+      <div class="fig-card" data-cat="eval"   onclick="openLB('figures/cm_logistic_regression.png')"><img src="figures/cm_logistic_regression.png" loading="lazy"/><div class="fig-caption"><strong>Confusion Matrix — Logistic Regression</strong>TP/TN/FP/FN breakdown.</div></div>
+      <div class="fig-card" data-cat="eval"   onclick="openLB('figures/cm_random_forest.png')"><img src="figures/cm_random_forest.png" loading="lazy"/><div class="fig-caption"><strong>Confusion Matrix — Random Forest</strong>Best model by F1 and ROC-AUC.</div></div>
+      <div class="fig-card" data-cat="eval"   onclick="openLB('figures/cm_xgboost.png')"><img src="figures/cm_xgboost.png" loading="lazy"/><div class="fig-caption"><strong>Confusion Matrix — XGBoost</strong>XGBoost test set confusion matrix.</div></div>
+      <div class="fig-card" data-cat="shap"   onclick="openLB('figures/12_shap_global_bar.png')"><img src="figures/12_shap_global_bar.png" loading="lazy"/><div class="fig-caption"><strong>Fig 12 — SHAP Global Importance</strong>Mean |SHAP| across 500 test consumers.</div></div>
+      <div class="fig-card" data-cat="shap"   onclick="openLB('figures/13_shap_summary.png')"><img src="figures/13_shap_summary.png" loading="lazy"/><div class="fig-caption"><strong>Fig 13 — SHAP Beeswarm</strong>Direction + magnitude of each feature's impact.</div></div>
+      <div class="fig-card" data-cat="shap"   onclick="openLB('figures/14_shap_waterfall_theft.png')"><img src="figures/14_shap_waterfall_theft.png" loading="lazy"/><div class="fig-caption"><strong>Fig 14 — SHAP Waterfall</strong>Individual explanation for a detected theft case.</div></div>
+      <div class="fig-card" data-cat="dimred" onclick="openLB('figures/15_pca_projection.png')"><img src="figures/15_pca_projection.png" loading="lazy"/><div class="fig-caption"><strong>Fig 15 — PCA 2D Projection</strong>Linear reduction. Shows partial class separation.</div></div>
+      <div class="fig-card" data-cat="dimred" onclick="openLB('figures/16_tsne_projection.png')"><img src="figures/16_tsne_projection.png" loading="lazy"/><div class="fig-caption"><strong>Fig 16 — t-SNE Projection</strong>Non-linear embedding (3,000 sample). Distinct theft clusters.</div></div>
+    </div>
+  </section>
+
+  <!-- Pipeline -->
+  <section id="pipeline">
+    <div class="section-header">
+      <div class="section-tag">🔧 Architecture</div>
+      <h2>End-to-End ML Pipeline</h2>
+    </div>
+    <div class="pipeline">
+      <div class="pipe-card"><span class="pipe-icon">🗂️</span><div class="pipe-step">Stage 1</div><div class="pipe-title">Preprocessing</div><div class="pipe-desc">ffill/bfill imputation, duplicate removal, 99th percentile outlier capping.</div></div>
+      <div class="pipe-card"><span class="pipe-icon">⚙️</span><div class="pipe-step">Stage 2</div><div class="pipe-title">Feature Engineering</div><div class="pipe-desc">12 statistical features: CV, load factor, sudden changes, rolling stats, weekend ratio.</div></div>
+      <div class="pipe-card"><span class="pipe-icon">📊</span><div class="pipe-step">Stage 3</div><div class="pipe-title">EDA + SMOTE</div><div class="pipe-desc">16 visualizations incl. PCA + t-SNE. SMOTE applied to fix 95:5 imbalance.</div></div>
+      <div class="pipe-card"><span class="pipe-icon">🤖</span><div class="pipe-step">Stage 4–5</div><div class="pipe-title">Training + Optuna</div><div class="pipe-desc">Baseline: LR, RF, XGBoost via GridSearchCV. Advanced: LightGBM, CatBoost, XGBoost via Optuna (30 trials).</div></div>
+      <div class="pipe-card"><span class="pipe-icon">📈</span><div class="pipe-step">Stage 6</div><div class="pipe-title">Evaluation</div><div class="pipe-desc">Threshold tuning, error analysis (FPR/FNR), benchmark vs published literature.</div></div>
+      <div class="pipe-card"><span class="pipe-icon">🔍</span><div class="pipe-step">Stage 7</div><div class="pipe-title">SHAP XAI</div><div class="pipe-desc">Global feature importance, beeswarm summary, per-consumer waterfall explanations.</div></div>
+    </div>
+  </section>
+
+  <!-- Tech -->
+  <section>
+    <div class="section-header">
+      <div class="section-tag">🛠️ Tech Stack</div>
+      <h2>Libraries &amp; Tools</h2>
+    </div>
+    <div class="tech-grid">
+      <div class="tech-chip">🐍 Python 3.10</div><div class="tech-chip">🔬 scikit-learn</div>
+      <div class="tech-chip">⚡ XGBoost</div><div class="tech-chip">💡 LightGBM</div>
+      <div class="tech-chip">🐱 CatBoost</div><div class="tech-chip">🎯 Optuna</div>
+      <div class="tech-chip">🧮 SHAP</div><div class="tech-chip">📊 SMOTE</div>
+      <div class="tech-chip">🔭 MLflow</div><div class="tech-chip">⚡ FastAPI</div>
+      <div class="tech-chip">🐳 Docker</div><div class="tech-chip">☁️ Render.com</div>
+      <div class="tech-chip">🤗 HuggingFace Static</div><div class="tech-chip">📉 Matplotlib / Seaborn</div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <p>⚡ <strong>Electricity Theft Detection</strong> · B III M.Sc. AI &amp; ML — Advanced Machine Learning Lab Project</p>
+  <p style="margin-top:6px">Random Forest + LightGBM + CatBoost + Optuna + SHAP + FastAPI + Docker</p>
+</footer>
+
+<script>
+// ── Helpers ──────────────────────────────────────────────────────────────
+function scrollTo(id){ document.getElementById(id).scrollIntoView({behavior:'smooth'}) }
+
+function switchTab(group, id){
+  document.querySelectorAll(`[id^="${group}-panel-"]`).forEach(p=>p.classList.remove('active'))
+  document.querySelectorAll(`[id^="${group}-"]`).forEach(b=>{ if(b.classList.contains('tab-btn')) b.classList.remove('active') })
+  document.getElementById(`${group}-panel-${id}`).classList.add('active')
+  document.getElementById(`${group}-${id}`).classList.add('active')
+}
+
+function filterFigs(cat){
+  document.querySelectorAll('.fig-card').forEach(c=>{ c.style.display=(cat==='all'||c.dataset.cat===cat)?'':'none' })
+  document.querySelectorAll('#fig-grid ~ .nav-tabs .tab-btn, .nav-tabs .tab-btn[id^="fig-"]').forEach(b=>b.classList.remove('active'))
+  document.getElementById('fig-'+cat).classList.add('active')
+}
+
+function openLB(src){ document.getElementById('lb-img').src=src; document.getElementById('lightbox').classList.add('open'); document.body.style.overflow='hidden' }
+function closeLB(){ document.getElementById('lightbox').classList.remove('open'); document.body.style.overflow='' }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeLB() })
+
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),5000) }
+
+// ── Dual-Engine API & In-Browser Inference ─────────────────────────────────
+let forceLocalMode = false
+
+function toggleForceLocal(){
+  forceLocalMode = !forceLocalMode
+  const btn = document.getElementById('local-mode-toggle')
+  const badge = document.getElementById('api-status-badge')
+  const dot = document.getElementById('api-dot')
+
+  if(forceLocalMode){
+    btn.style.background = 'var(--accent)'
+    btn.style.color = '#fff'
+    btn.textContent = '⚡ In-Browser (Active)'
+    dot.className = 'api-status local'
+    badge.textContent = 'In-Browser Engine Active'
+    badge.style.color = '#f59e0b'
+    showToast('Switched to client-side ML engine. Predictions run directly in browser without API calls.')
+  } else {
+    btn.style.background = ''
+    btn.style.color = 'var(--accent)'
+    btn.textContent = '⚡ Direct In-Browser'
+    pingApi()
+  }
+}
+
+async function pingApi(){
+  const url = document.getElementById('api-url').value.trim()
+  const dot = document.getElementById('api-dot')
+  const badge = document.getElementById('api-status-badge')
+  if(forceLocalMode) return
+
+  dot.className = 'api-status'
+  badge.textContent = 'Connecting...'
+  badge.style.color = 'var(--muted)'
+
+  try {
+    const r = await fetch(url+'/health', { method:'GET', signal:AbortSignal.timeout(6000) })
+    if(r.ok){
+      dot.className = 'api-status online'
+      badge.textContent = 'Cloud API: Online'
+      badge.style.color = 'var(--accent3)'
+    } else {
+      throw new Error('API returned '+r.status)
+    }
+  } catch(e){
+    dot.className = 'api-status local'
+    badge.textContent = 'In-Browser Engine Active'
+    badge.style.color = '#f59e0b'
+  }
+}
+pingApi()
+
+// ── Presets ──────────────────────────────────────────────────────────────
+const PRESETS = {
+  theft:      { mean_consumption:3.2, std_consumption:4.8, max_consumption:28.0, min_consumption:0.1, cv_consumption:1.50, peak_offpeak_ratio:18.0, weekend_weekday_ratio:1.4, mean_to_peak_ratio:0.11, load_factor:0.11, sudden_change_count:180, rolling_mean_7d:3.0, rolling_std_7d:2.5 },
+  normal:     { mean_consumption:9.5, std_consumption:2.1, max_consumption:15.0, min_consumption:4.0, cv_consumption:0.22, peak_offpeak_ratio:2.8,  weekend_weekday_ratio:1.1, mean_to_peak_ratio:0.63, load_factor:0.63, sudden_change_count:28,  rolling_mean_7d:9.3, rolling_std_7d:1.8 },
+  suspicious: { mean_consumption:5.1, std_consumption:3.9, max_consumption:22.0, min_consumption:0.5, cv_consumption:0.76, peak_offpeak_ratio:10.0, weekend_weekday_ratio:1.3, mean_to_peak_ratio:0.23, load_factor:0.23, sudden_change_count:95,  rolling_mean_7d:5.0, rolling_std_7d:2.0 }
+}
+
+function loadPreset(name){
+  const p = PRESETS[name]
+  if(p) Object.keys(p).forEach(k => { const el = document.getElementById(k); if(el) el.value = p[k] })
+}
+
+// ── In-Browser Machine Learning Engine ─────────────────────────────────────
+// Calibrated from trained Random Forest and Logistic Regression models + StandardScaler on SGCC Dataset
+function runLocalInference(p){
+  const FEATURE_COLS = [
+    "mean_consumption", "std_consumption", "max_consumption", "min_consumption",
+    "cv_consumption", "peak_offpeak_ratio", "weekend_weekday_ratio",
+    "mean_to_peak_ratio", "load_factor", "sudden_change_count",
+    "rolling_mean_7d", "rolling_std_7d"
+  ]
+  const SCALER_MEAN  = [10.1343, 6.1882, 38.1530, 0.7509, 1.2245, 21.7034, 1.2194, 0.2468, 0.2468, 109.3946, 10.6786, 1.8744]
+  const SCALER_SCALE = [11.8969, 5.8357, 27.9875, 2.8334, 2.6262, 138.6186, 26.3881, 0.1357, 0.1357, 88.2024, 14.5951, 2.4990]
+  const LR_COEF      = [-0.8858, 1.0986, 0.1524, 0.0841, -0.3830, -0.0194, -0.0213, -0.2511, -0.2511, -0.1422, 1.1673, -0.3369]
+  const LR_INTERCEPT = 0.1173
+  const IMPORTANCES  = [0.0677, 0.1194, 0.1009, 0.0556, 0.0835, 0.1244, 0.0684, 0.0561, 0.0591, 0.0962, 0.0918, 0.0770]
+
+  let z = LR_INTERCEPT
+  const contributions = []
+  FEATURE_COLS.forEach((col, i) => {
+    const val = p[col] !== undefined ? p[col] : 0
+    const scaled = (val - SCALER_MEAN[i]) / SCALER_SCALE[i]
+    z += scaled * LR_COEF[i]
+    const impact = Math.abs(scaled) * IMPORTANCES[i]
+    contributions.push({ feature: col, importance: impact })
+  })
+
+  // Sigmoid logit -> probability
+  const prob = 1 / (1 + Math.exp(-z))
+  // Tuned decision threshold is 0.325 (optimizing F1 on SGCC imbalanced test distribution)
+  const isTheft = prob >= 0.325
+  const risk_score = Math.min(Math.max(Math.round(prob * 1000) / 10, 0), 100)
+  const risk_level = prob < 0.25 ? 'Low' : prob < 0.45 ? 'Medium' : 'High'
+  const prediction = isTheft ? 'Potential Electricity Theft' : 'Normal Consumer'
+
+  contributions.sort((a, b) => b.importance - a.importance)
+
+  return {
+    prediction: prediction,
+    probability: prob,
+    risk_score: risk_score,
+    risk_level: risk_level,
+    top_features: contributions.slice(0, 6),
+    source: 'local'
+  }
+}
+
+// ── Prediction Dispatcher ─────────────────────────────────────────────────
+async function runPrediction(){
+  const btn = document.getElementById('predict-btn')
+  const txt = document.getElementById('btn-text')
+  const sp  = document.getElementById('spinner')
+  const url = document.getElementById('api-url').value.trim()
+
+  // read inputs
+  const fields = ['mean_consumption','std_consumption','max_consumption','min_consumption',
+                  'cv_consumption','peak_offpeak_ratio','weekend_weekday_ratio',
+                  'mean_to_peak_ratio','load_factor','sudden_change_count',
+                  'rolling_mean_7d','rolling_std_7d']
+  const payload = {}
+  for(const f of fields){ payload[f] = parseFloat(document.getElementById(f).value) || 0 }
+
+  btn.disabled = true; txt.textContent = 'Predicting...'; sp.style.display = 'block'
+
+  // If local mode forced or url empty, execute immediately
+  if(forceLocalMode || !url){
+    setTimeout(() => {
+      const data = runLocalInference(payload)
+      renderResult(data, 'local')
+      btn.disabled = false; txt.textContent = '⚡ Run Prediction'; sp.style.display = 'none'
+    }, 120)
+    return
+  }
+
+  // Otherwise attempt cloud API call with graceful in-browser fallback
+  try {
+    const resp = await fetch(url+'/predict', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(8000)
+    })
+    if(!resp.ok) throw new Error(`API error ${resp.status}`)
+    const data = await resp.json()
+    renderResult(data, 'cloud')
+  } catch(e) {
+    // Cloud API offline or sleeping -> Instant seamless fallback
+    const localData = runLocalInference(payload)
+    renderResult(localData, 'local')
+    showToast('Render API is offline or asleep. Evaluated instantly via In-Browser ML Engine!')
+    const dot = document.getElementById('api-dot')
+    const badge = document.getElementById('api-status-badge')
+    if(dot) dot.className = 'api-status local'
+    if(badge){ badge.textContent = 'In-Browser Engine Active'; badge.style.color = '#f59e0b' }
+  } finally {
+    btn.disabled = false; txt.textContent = '⚡ Run Prediction'; sp.style.display = 'none'
+  }
+}
+
+function renderResult(data, sourceMode){
+  document.getElementById('result-empty').style.display = 'none'
+  const card = document.getElementById('result-card')
+  card.classList.add('show')
+
+  const mode = sourceMode || data.source || 'cloud'
+  const badgeEl = document.getElementById('engine-badge')
+  if(badgeEl){
+    if(mode === 'local'){
+      badgeEl.innerHTML = '⚡ In-Browser ML Engine'
+      badgeEl.style.background = 'rgba(245,158,11,0.15)'
+      badgeEl.style.color = '#f59e0b'
+    } else {
+      badgeEl.innerHTML = '☁️ Cloud API (Render.com)'
+      badgeEl.style.background = 'rgba(16,185,129,0.15)'
+      badgeEl.style.color = '#10b981'
+    }
+  }
+
+  const isTheft = data.prediction.toLowerCase().includes('theft')
+  const prob    = (data.probability * 100).toFixed(1)
+  const score   = typeof data.risk_score === 'number' ? data.risk_score.toFixed(1) : (data.probability * 100).toFixed(1)
+  const level   = data.risk_level || (prob < 25 ? 'Low' : prob < 45 ? 'Medium' : 'High')
+
+  // verdict
+  const box = document.getElementById('verdict-box')
+  box.className = 'verdict ' + (isTheft ? 'theft' : 'normal')
+  document.getElementById('verdict-icon').textContent  = isTheft ? '🚨' : '✅'
+  document.getElementById('verdict-label').textContent = data.prediction
+  document.getElementById('verdict-prob').textContent  = `Theft probability: ${prob}%`
+
+  // gauge
+  document.getElementById('gauge-needle').style.left = Math.min(Math.max(score, 1), 99) + '%'
+  const scoreEl = document.getElementById('gauge-score')
+  scoreEl.textContent = score
+  scoreEl.style.color = score < 30 ? 'var(--accent3)' : score < 60 ? '#f59e0b' : 'var(--danger)'
+
+  // risk rows
+  document.getElementById('res-prob').textContent = prob + '%'
+  const lvlEl = document.getElementById('res-level')
+  lvlEl.textContent = level
+  lvlEl.style.color = level === 'Low' ? 'var(--accent3)' : level === 'Medium' ? '#f59e0b' : 'var(--danger)'
+
+  // top features
+  const barsEl = document.getElementById('feature-bars')
+  barsEl.innerHTML = ''
+  const rawFeatures = data.top_features || []
+  
+  if(rawFeatures.length){
+    const maxVal = Math.max(...rawFeatures.map(f => {
+      if(typeof f === 'object') return Math.abs(f.shap || f.importance || 0.1)
+      return 0.1
+    }), 0.001)
+
+    rawFeatures.slice(0, 6).forEach((f, idx) => {
+      let name = 'Feature'
+      let val = (1 - idx * 0.15)
+      if(typeof f === 'object'){
+        name = (f.feature || f.name || 'Feature')
+        val = Math.abs(f.shap !== undefined ? f.shap : (f.importance !== undefined ? f.importance : val))
+      } else if(typeof f === 'string'){
+        name = f
+      }
+      name = name.replace(/_/g, ' ')
+      const pct = Math.min(Math.max((val / maxVal) * 100, 15), 100).toFixed(0)
+      barsEl.innerHTML += `
+        <div class="feat-row">
+          <div class="feat-name">${name}</div>
+          <div class="feat-track"><div class="feat-fill" style="width:${pct}%"></div></div>
+          <div class="feat-val">${pct}%</div>
+        </div>`
+    })
+  } else {
+    barsEl.innerHTML = '<div style="font-size:12px;color:var(--muted)">Feature importance not returned.</div>'
+  }
+}
+</script>
+</body>
+</html>

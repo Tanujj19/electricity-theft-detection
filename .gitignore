@@ -1,0 +1,27 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Large Datasets (>100MB)
+data/raw/
+data/processed/
+*.csv.gz
+
+# MLflow run cache (contains duplicate 100MB model artifacts)
+mlruns/
+
+# Environment & Secrets
+.env
+hf_token.txt
+*.token
+secrets/
+.venv/
+venv/
+ENV/
+
+# OS and Editor artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
